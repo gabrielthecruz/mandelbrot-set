@@ -1,28 +1,35 @@
+from matplotlib import colors
+import matplotlib.pyplot as plt
+
+import numpy as np
+import matplotlib
+
+
 def check_point(c, iterations=10):
-    print(c)
     r = 0
     results = set()
     for i in range(iterations):
         r = r ** 2 + c
-        results.add(r)
-        if (r.real > 2 or r.imag > 2) or (r.real <= -2 or r.imag <= -2):
+
+        if r.real > 2 or r.imag > 2:
+            return False
+        elif r in results:
             break
-    else:
-        return results
+
+        results.add(r)
     
-    return set()
+    return True
 
 
-# c = -1j
-# func = get_mandelbrot(c)
-# r = {0j}
-# coords = {(0,0)}
-# lr = 0
-# for _ in range(100):
-#     x = func(lr)
-#     lr = x
-#     r.add(x)
-#     coords.add((x.real, x.imag))
+def points(min_x, max_x, min_y, max_y):
+    for x in np.arange(min_x, max_x, 0.001):
+        for y in np.arange(min_y, max_y, 0.001):
+            yield x + y * 1j
 
-# print(r)
-# print(coords)
+
+fig, ax = plt.subplots()
+for z in points(-2, 0.5, -1, 1):
+    if check_point(z, iterations=20):
+        ax.plot(z.real, z.imag, 'k,-')
+    
+plt.show()
