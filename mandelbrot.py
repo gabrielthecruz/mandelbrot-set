@@ -1,29 +1,41 @@
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import colors
 
 
-def np_check(c_number, iterations):
-    rs = np.zeros(iterations, dtype=complex)
+def check(coordinate, iterations):
+    results = np.zeros(iterations, dtype=complex)
+    valid_coord = True
 
     for i in range(1, iterations):
-        rs[i] = rs[i-1] ** 2 + c_number
+        results[i] = results[i-1] ** 2 + coordinate
 
-        if rs[i].real > 2 and rs.imag > 2:
+        cond1 = results.real > 2
+        cond2 = results.imag > 2
+        cond3 = results[:i] == results[i]
+        if np.any([cond1, cond2, cond3]):
+            valid_coord = False
             break
-        elif rs[i] in rs[:i]:
-            break
-    
-    return rs[:i+1]
+
+    return valid_coord, results
 
 
-def points(min_x, max_x, min_y, max_y):
-    xs = np.arange(min_x, max_x, 0.001).round(decimals=3)
-    ys = np.arange(min_y, max_y, 0.001).round(decimals=3)
-    cs = xs + (1j * ys)
+def get_coords(x_interval, i_interval, precision=1):
+    step = 1 / 10 ** precision
+    x = np.arange(*x_interval, step)
+    i = np.arange(*i_interval, step, dtype=complex) * 1j
+
+    x_axis, i_axis = np.meshgrid(x, i, indexing='ij', sparse=True)
+    coordinates = (x_axis + i_axis).round(precision)
     
-    return cs
+    return coordinates
+
+
+def export_coords(coordinates, total, b_results, c_results, filename='coords.csv'):
+    file_header = ('coord', 'in', 'iterations', 'last_result')
+    data = (coordinates, total, b_results, c_results)
+    np.savetxt(filename, data, header=file_header, delimiter=',', newline='\n',
+               encoding='utf-8', )
+
 
 
 def export_points():
@@ -33,7 +45,6 @@ def export_points():
     y = (-1, 1)
     i = 50
 
-    
     with open('points_bkp\points3.csv', 'w', encoding='utf-8', newline='') as csv_file:
         csv_writer = csv.writer(csv_file, delimiter='\t')
         csv_writer.writerow(('x', 'y', 'mandelbrot?', 'iteração', 'z(n)'))
@@ -55,10 +66,30 @@ def read_points(ax):
 
 
 def main():
+    x = (-2, .5)
+    y = (-1, 1)
+
+    coords = get_coords(x, y, 1)
+    b_results = np.empty(coords.size, dtype=bool)
+    total = np.empty(coords.size, dtype=int)
+    c_results = np.empty(coords.size, dtype=complex)
+    
+    for index, coord in enumerate(coords):
+        r = check(coord, 20)
+        b_results[index] = r[0]
+        c_results[index] = r[1][-1]
+        total[index] = r[1].size
+
+    export_coords(coords, total, b_results, c_results, 'test.csv')
+
     # complexes = points(-2, 0.5, -1, 1):
     fig, ax = plt.subplots()
+
+    # x_axis, i_axis, z_axis = np.meshgrid(coords.real, coords.imag, b_results)
+
+
     
-    ax = read_points(ax)
+    # ax = 
     plt.show()
 
 
