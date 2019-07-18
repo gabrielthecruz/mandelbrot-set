@@ -3,20 +3,25 @@ import numpy as np
 
 
 def check(coordinate, iterations):
-    results = np.zeros(iterations, dtype=complex)
-    valid_coord = True
+    # coordinate = x + y * 1j
+    results = [0]
+    is_valid = True
 
-    for i in range(1, iterations):
-        results[i] = results[i-1] ** 2 + coordinate
+    for _ in range(iterations):
+        result = results[-1] ** 2 + coordinate
 
-        cond1 = results.real > 2
-        cond2 = results.imag > 2
-        cond3 = results[:i] == results[i]
-        if np.any([cond1, cond2, cond3]):
-            valid_coord = False
+        conditions = [
+            result.real > 2,
+            result.imag > 2,
+            result in results
+        ]
+        
+        results.append(result)
+        if any(conditions):
+            is_valid = False
             break
 
-    return valid_coord, results
+    return is_valid, results[-1], len(results)
 
 
 def get_coords(x_interval, i_interval, precision=1):
@@ -30,12 +35,16 @@ def get_coords(x_interval, i_interval, precision=1):
     return coordinates
 
 
-def export_coords(coordinates, total, b_results, c_results, filename='coords.csv'):
-    file_header = ('coord', 'in', 'iterations', 'last_result')
-    data = (coordinates, total, b_results, c_results)
-    np.savetxt(filename, data, header=file_header, delimiter=',', newline='\n',
-               encoding='utf-8', )
-
+def export_coords(header, *args, filename='coords.csv'):
+    
+    # for a,b,c,d in :
+    #     print(a,b,c,d)
+    #     break
+    types = [complex, bool, complex, int]
+    data = np.array(list(np.nditer(args)), dtype='<c16,<i4,<c16,<i4')  # |b1
+    print(data.dtype)
+    np.savetxt(filename, data, header=','.join(header), delimiter=',',
+               encoding='utf-8', fmt=['%.3f %+.3c', '%d', '%.3f %+.3c', '%d'])  # 
 
 
 def export_points():
@@ -69,28 +78,19 @@ def main():
     x = (-2, .5)
     y = (-1, 1)
 
-    coords = get_coords(x, y, 1)
-    b_results = np.empty(coords.size, dtype=bool)
-    total = np.empty(coords.size, dtype=int)
-    c_results = np.empty(coords.size, dtype=complex)
+    coords = get_coords(x, y, 1).ravel()
+    check_array = np.vectorize(check)
+    # check_array = np.frompyfunc(check, 2, 3, dtype=[bool, complex, int])
+    result = check_array(coords, 20)
+    header = ('Coordenadas', 'Ativo', 'Resultado', 'Iteracao')
+
+    export_coords(header, coords, *result, filename='test.csv')
     
-    for index, coord in enumerate(coords):
-        r = check(coord, 20)
-        b_results[index] = r[0]
-        c_results[index] = r[1][-1]
-        total[index] = r[1].size
-
-    export_coords(coords, total, b_results, c_results, 'test.csv')
-
-    # complexes = points(-2, 0.5, -1, 1):
-    fig, ax = plt.subplots()
-
-    # x_axis, i_axis, z_axis = np.meshgrid(coords.real, coords.imag, b_results)
-
-
-    
-    # ax = 
-    plt.show()
+    # fig, ax = plt.subplots()
+    # print_x = np.where(result[0] == True, coords.real, None)
+    # print_y = np.where(result[0] == True, coords.imag, None)
+    # ax.plot(print_x, print_y, ',-', color='black')
+    # plt.show()
 
 
 if __name__ == '__main__':
