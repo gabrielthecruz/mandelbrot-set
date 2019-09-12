@@ -1,75 +1,74 @@
-import matplotlib.pyplot as plt
+import itertools
 import numpy as np
+from PIL import Image
+
+WIDTH, HEIGHT = (400, 300)
+MAX_ITERATIONS = 20
+COLORS = [
+    (0, 0, 0), (25, 25, 25), (50, 50, 50),
+    (76, 76, 76), (102, 102, 102), (127, 127, 127),
+    (153, 153, 153), (178, 178, 178), (204, 204, 204),
+    (229, 229, 229)
+]
 
 
-def check(coordinate, iterations):
-    # coordinate = x + y * 1j
-    results = [0]
-    is_valid = True
+def gen_pixels(width, height):
+    '''Yields a (x, y) pair with the coordinates of each pixel.'''
+    x = range(1, width)
+    y = range(1, height)
 
-    for _ in range(iterations):
-        result = results[-1] ** 2 + coordinate
-
-        conditions = [
-            result.real > 2,
-            result.imag > 2,
-            result in results
-        ]
-        
-        results.append(result)
-        if any(conditions):
-            is_valid = False
-            break
-
-    return is_valid, results[-1], len(results)
+    for pixel in itertools.product(x, y):
+        yield pixel
 
 
-def get_coords(x_interval, i_interval, precision=1):
-    step = 1 / 10 ** precision
-    x = np.arange(*x_interval, step)
-    i = np.arange(*i_interval, step, dtype=complex) * 1j
+def gen_coords(min_x, max_x, min_y, max_y, width, height):
+    '''Yields the coordinate of each point of the Mandelbrot set.'''
+    x_axis = np.linspace(min_x, max_x, num=width)
+    y_axis = np.linspace(min_y, max_y, num=height)
 
-    x_axis, i_axis = np.meshgrid(x, i, indexing='ij', sparse=True)
-    coordinates = (x_axis + i_axis).round(precision)
-    
-    return coordinates
+    for coord in itertools.product(x_axis, y_axis):
+        yield coord
 
 
-def export_coords(header, *args, filename='coords.csv'):
-    data = np.rec.fromarrays(args, names=header)
-    data['Resultado'] = data['Resultado'].round(3)
+def gen_iterations(pixels, coords, depth=10):
+    '''Yields the number of iterations of each pixel.'''
+    for pixel, coord in zip(pixels, coords):
+        scaled_x, scaled_y = coord
+        x, y = coord
 
-    np.savetxt(filename, data, header=','.join(header), delimiter=',',
-               encoding='utf-8', fmt=['%s', '%d', '%s', '%d'])  # 
+        for iteration in range(depth):
+            x = (x*x) - (y*y) + scaled_x
+            y = (2 * x * y) + scaled_y
 
+            if abs(x*x) + abs(y*y) > 4:
+                break
 
-def read_points(ax):
-    filename = 'points_bkp\points3.csv'
-    points = np.genfromtxt(filename, delimiter=',', skip_header=1, 
-        dtype=(float, float, int), usecols=(0, 1, 2), names=('a', 'b', 'c'))
-    
-    xs = np.where(points['c'] == 1, points['a'], None)
-    ys = np.where(points['c'] == 1, points['b'], None)
-    ax.plot(xs, ys, ',-', color='black')
+        yield pixel, iteration
 
 
-def main():
-    x = (-2, .5)
-    y = (-1, 1)
-
-    coords = get_coords(x, y, 3).ravel()
-    check_array = np.vectorize(check)
-    result = check_array(coords, 20)
-    header = ('Coordenadas', 'Ativo', 'Resultado', 'Iteracao')
-
-    export_coords(header, coords, *result, filename='test.csv')
-    
-    fig, ax = plt.subplots()
-    print_x = np.where(result[0] == True, coords.real, None)
-    print_y = np.where(result[0] == True, coords.imag, None)
-    ax.plot(print_x, print_y, ',-', color='black')
-    plt.show()
+def gen_hist_colors(pixel_iterations):
+    '''Yields the pixel and its color.'''
+    for pixel, color_index in pixel_iterations:
+        if color_index == MAX_ITERATIONS - 1:
+            color = (0, 0, 0)
+        else:
+            color = (255, 255, 255)
+        yield pixel, color
 
 
-if __name__ == '__main__':
-    main()
+def plot_on_image(image, pixels):
+    '''Draws the color on the pixel coordinates on image.'''
+    for pixel, color in pixels:
+        image.putpixel(pixel, color)
+
+
+pixels = gen_pixels(WIDTH, HEIGHT)
+coords = gen_coords(-2, 2, -1, 1, WIDTH, HEIGHT)
+iterations = gen_iterations(pixels, coords)
+colors = gen_hist_colors(iterations)
+
+image = Image.new('RGB', (WIDTH, HEIGHT))
+
+plot_on_image(image, colors)
+
+image.save('mandelbot.jpg')
