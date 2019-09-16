@@ -1,74 +1,47 @@
-import itertools
-import numpy as np
+from collections import namedtuple
 from PIL import Image
-
-WIDTH, HEIGHT = (400, 300)
-MAX_ITERATIONS = 20
-COLORS = [
-    (0, 0, 0), (25, 25, 25), (50, 50, 50),
-    (76, 76, 76), (102, 102, 102), (127, 127, 127),
-    (153, 153, 153), (178, 178, 178), (204, 204, 204),
-    (229, 229, 229)
-]
+import numpy as np
 
 
-def gen_pixels(width, height):
-    '''Yields a (x, y) pair with the coordinates of each pixel.'''
-    x = range(1, width)
-    y = range(1, height)
+def check(coord, max_iter):
+    c = coord.x + coord.y * 1j
+    z = 0+0j
 
-    for pixel in itertools.product(x, y):
-        yield pixel
+    for iter_n in range(max_iter):
+        z = z*z + c
+        if z.real > 2 or z.imag > 2:
+            break  # return False
 
-
-def gen_coords(min_x, max_x, min_y, max_y, width, height):
-    '''Yields the coordinate of each point of the Mandelbrot set.'''
-    x_axis = np.linspace(min_x, max_x, num=width)
-    y_axis = np.linspace(min_y, max_y, num=height)
-
-    for coord in itertools.product(x_axis, y_axis):
-        yield coord
+    return iter_n  # return True
 
 
-def gen_iterations(pixels, coords, depth=10):
-    '''Yields the number of iterations of each pixel.'''
-    for pixel, coord in zip(pixels, coords):
-        scaled_x, scaled_y = coord
-        x, y = coord
+def get_coords(x_range, i_range, width, height):
+    real = np.linspace(*x_range, num=width)
+    imag = np.linspace(*i_range, num=height)
+    Point = namedtuple('Point', ['x', 'y'])
 
-        for iteration in range(depth):
-            x = (x*x) - (y*y) + scaled_x
-            y = (2 * x * y) + scaled_y
-
-            if abs(x*x) + abs(y*y) > 4:
-                break
-
-        yield pixel, iteration
+    for px, x in enumerate(real):
+        for py, y in enumerate(imag):
+            yield Point(px, py), Point(x, y)
 
 
-def gen_hist_colors(pixel_iterations):
-    '''Yields the pixel and its color.'''
-    for pixel, color_index in pixel_iterations:
-        if color_index == MAX_ITERATIONS - 1:
-            color = (0, 0, 0)
-        else:
-            color = (255, 255, 255)
-        yield pixel, color
+def main():
+    x = (-2.2, 0.8)
+    y = (-1.2, 1.2)
+    width = 800
+    height = 600
+    image = Image.new('RGB', (width, height))
+
+    for pixel, coord in get_coords(x, y, width, height):
+        n = check(coord, 100)
+        red = 0 if n < 99 else 255
+        green = 0 if n < 99 else 255
+        blue = 0 if n < 99 else 255
+
+        image.putpixel(pixel, (red, green, blue))
+    
+    image.save('../mandelbrot.png', 'PNG')
 
 
-def plot_on_image(image, pixels):
-    '''Draws the color on the pixel coordinates on image.'''
-    for pixel, color in pixels:
-        image.putpixel(pixel, color)
-
-
-pixels = gen_pixels(WIDTH, HEIGHT)
-coords = gen_coords(-2, 2, -1, 1, WIDTH, HEIGHT)
-iterations = gen_iterations(pixels, coords)
-colors = gen_hist_colors(iterations)
-
-image = Image.new('RGB', (WIDTH, HEIGHT))
-
-plot_on_image(image, colors)
-
-image.save('mandelbot.jpg')
+if __name__ == '__main__':
+    main()
