@@ -4,15 +4,15 @@ import numpy as np
 
 
 def check(coord, max_iter):
-    c = coord.x + coord.y * 1j
-    z = 0+0j
+    x, y = coord.x, coord.y
 
     for iter_n in range(max_iter):
-        z = z*z + c
-        if z.real > 2 or z.imag > 2:
-            break  # return False
+        x, y = x*x - y*y + coord.x, 2*x*y + coord.y
 
-    return iter_n  # return True
+        if x*x + y*y > 4:
+            break
+
+    return iter_n
 
 
 def get_coords(x_range, i_range, width, height):
