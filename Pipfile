@@ -8,6 +8,7 @@ pandas = "*"
 dask = {extras = ["dataframe"],version = "*"}
 vispy = "*"
 pycairo = "*"
+flake8 = "*"
 
 [packages]
 numpy = "*"
