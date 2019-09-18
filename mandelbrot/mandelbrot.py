@@ -1,17 +1,22 @@
 from collections import namedtuple
-from PIL import Image, ImageColor
+from PIL import Image
 import numpy as np
 import math
 
 
+def gen_palette(ncolors):
+    red = np.linspace(0, 15, num=ncolors)
+    green = np.linspace(16, 92, num=ncolors)
+    blue = np.linspace(23, 232, num=ncolors)
+
+    return list(zip(red, green, blue))
+
+
 def check(coord, max_iter, callback=None):
     x, y = coord.x, coord.y
-    xsqr = 0
-    ysqr = 0
-    zsqr = 0
+    xsqr, ysqr, zsqr = 0, 0, 0
 
     for iter_n in range(max_iter):
-        # x, y = x*x - y*y + coord.x, 2*x*y + coord.y
         x = xsqr - ysqr + coord.x
         y = zsqr - xsqr - ysqr + coord.y
         xsqr = x ** 2
@@ -41,7 +46,7 @@ def smooth_coloring(iterations, x, y, max_iterations):
     if iterations + 1 < max_iterations:
         log_xy = math.log(x*x + y*y) / 2
         v_xy = math.log(log_xy / math.log(2)) / math.log(2)
-        iterations += 1 - v_xy
+        iterations -= v_xy
 
     return iterations
 
@@ -52,15 +57,18 @@ def main():
     width = 800
     height = 600
     image = Image.new('RGB', (width, height))
+    max_iterations = 100
+    palette = gen_palette(max_iterations)
 
     for pixel, coord in get_coords(x, y, width, height):
-        n = check(coord, 100)
+        n = check(coord, max_iterations, callback=smooth_coloring)
 
-        red = 0 if n < 99 else 255
-        green = 0 if n < 99 else 255
-        blue = 0 if n < 99 else 255
+        color1 = palette[math.ceil(n)]
+        color2 = palette[(math.ceil(n) + 1) % max_iterations]
 
-        image.putpixel(pixel, (red, green, blue))
+        color = tuple(int(color1[i] + n%1 * (color2[i] - color1[i])) for i in range(3))
+
+        image.putpixel(pixel, color)
 
     image.save('../mandelbrot.png', 'PNG')
 
