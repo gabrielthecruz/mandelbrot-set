@@ -2,14 +2,7 @@ from collections import namedtuple
 from PIL import Image
 import numpy as np
 import math
-
-
-def gen_palette(ncolors):
-    red = np.linspace(0, 15, num=ncolors)
-    green = np.linspace(16, 92, num=ncolors)
-    blue = np.linspace(23, 232, num=ncolors)
-
-    return list(zip(red, green, blue))
+from colors import Palette
 
 
 def check(coord, max_iter, callback=None):
@@ -74,4 +67,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    p = Palette('colors.txt')
+    print(p.colors)
