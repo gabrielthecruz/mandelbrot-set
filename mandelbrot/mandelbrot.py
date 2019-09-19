@@ -50,22 +50,20 @@ def main():
     width = 800
     height = 600
     image = Image.new('RGB', (width, height))
-    max_iterations = 100
-    palette = gen_palette(max_iterations)
+    max_iterations = 50
+    palette = Palette('colors.txt')
 
     for pixel, coord in get_coords(x, y, width, height):
         n = check(coord, max_iterations, callback=smooth_coloring)
 
         color1 = palette[math.ceil(n)]
-        color2 = palette[(math.ceil(n) + 1) % max_iterations]
+        color2 = palette[math.ceil(n) + 1]
+        color = color1.linear_interpolate(color2, n % 1)
 
-        color = tuple(int(color1[i] + n%1 * (color2[i] - color1[i])) for i in range(3))
-
-        image.putpixel(pixel, color)
+        image.putpixel(pixel, color.get())
 
     image.save('../mandelbrot.png', 'PNG')
 
 
 if __name__ == '__main__':
-    p = Palette('colors.txt')
-    print(p.colors)
+    main()

@@ -33,7 +33,7 @@ class Palette:
 
         try:
             with open(src, 'r') as f:
-                colors = (tuple(map(int, row.split(' ')) for row in f))
+                colors = (tuple(map(int, line.split(' ')) for line in f))
                 
                 for red, green, blue in colors:
                     self.colors.append(Color(red, green, blue))
@@ -41,7 +41,7 @@ class Palette:
             raise FileNotFoundError('{!r} was not found'.format(src))
     
     def __getitem__(self, index):
-        return self.colors[index]
+        return self.colors[index % len(self.colors)]
 
 
 if __name__ == '__main__':
