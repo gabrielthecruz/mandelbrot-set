@@ -1,69 +1,95 @@
-from collections import namedtuple
+from itertools import product
 from PIL import Image
 import numpy as np
 import math
-from colors import Palette
 
 
-def check(coord, max_iter, callback=None):
-    x, y = coord.x, coord.y
-    xsqr, ysqr, zsqr = 0, 0, 0
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 
-    for iter_n in range(max_iter):
-        x = xsqr - ysqr + coord.x
-        y = zsqr - xsqr - ysqr + coord.y
-        xsqr = x ** 2
-        ysqr = y ** 2
-        zsqr = (x + y) ** 2
+    def __iter__(self):
+        return iter([self.x, self.y])
 
-        if xsqr + ysqr > 4:
+
+class Pixel(Point):
+    pass
+
+
+class Coordinate(Point):
+    pass
+
+
+def coordinates(min_x, max_x, min_y, max_y, width, height):
+    '''Yields a pixel and a coordinate.'''
+    x_axis = np.linspace(min_x, max_x, num=width)
+    y_axis = np.linspace(min_y, max_y, num=height)
+
+    for (px, x), (py, y) in product(enumerate(x_axis), enumerate(y_axis)):
+        yield Pixel(px, py), Coordinate(x, y)
+
+
+def bulb_checking(coord):
+    '''Performs the bulb checking for optimization.'''
+    x, y = coord
+    sqr_y = y ** 2
+    q = (x - 0.25) ** 2 + sqr_y
+
+    return q * (q + x - 0.25) <= 0.25 * sqr_y
+
+
+def escape_time(coord, max_iter):
+    '''
+    Executes escape time algorithm on coord.
+    Returns the last iteration number, x and y values calculated.
+    '''
+    sqr_x, sqr_y, sqr_z = 0, 0, 0
+
+    for iteration in range(1, max_iter + 1):
+        x = sqr_x - sqr_y + coord.x
+        y = sqr_z - sqr_x - sqr_y + coord.y
+
+        sqr_x = x ** 2
+        sqr_y = y ** 2
+        sqr_z = (x + y) ** 2
+
+        if sqr_x + sqr_y > 4:
             break
 
-    if callback is not None:
-        iter_n = callback(iter_n, x, y, max_iter)
-
-    return iter_n
+    return iteration, x, y
 
 
-def get_coords(x_range, i_range, width, height):
-    real = np.linspace(*x_range, num=width)
-    imag = np.linspace(*i_range, num=height)
-    Point = namedtuple('Point', ['x', 'y'])
+def smooth_coloring(iter_n, x, y, max_iters):
+    if iter_n < max_iters:
+        log_z = math.log(x ** 2 + y ** 2) / 2
+        iter_n += 1 - math.log(log_z / math.log(2)) / math.log(2)
 
-    for px, x in enumerate(real):
-        for py, y in enumerate(imag):
-            yield Point(px, py), Point(x, y)
+    hue = int(255 * iter_n / max_iters)
+    saturation = 255
+    value = 255 if iter_n < max_iters else 0
 
-
-def smooth_coloring(iterations, x, y, max_iterations):
-    if iterations + 1 < max_iterations:
-        log_xy = math.log(x*x + y*y) / 2
-        v_xy = math.log(log_xy / math.log(2)) / math.log(2)
-        iterations -= v_xy
-
-    return iterations
+    return (hue, saturation, value)
 
 
-def main():
-    x = (-2.2, 0.8)
-    y = (-1.2, 1.2)
-    width = 800
-    height = 600
-    image = Image.new('RGB', (width, height))
-    max_iterations = 50
-    palette = Palette('colors.txt')
+def mandelbrot(min_x, max_x, min_y, max_y, max_iters, image):
+    '''Draws the Mandelbrot Set on image.'''
+    width, height = image.size
 
-    for pixel, coord in get_coords(x, y, width, height):
-        n = check(coord, max_iterations, callback=smooth_coloring)
+    for pixel, coord in coordinates(min_x, max_x, min_y, max_y, width, height):
+        if bulb_checking(coord):
+            color = (0, 0, 0)
 
-        color1 = palette[math.ceil(n)]
-        color2 = palette[math.ceil(n) + 1]
-        color = color1.linear_interpolate(color2, n % 1)
+        else:
+            iteration, x, y = escape_time(coord, max_iters)
+            color = smooth_coloring(iteration, x, y, max_iters)
 
-        image.putpixel(pixel, color.get())
+        image.putpixel(tuple(pixel), color)
 
-    image.save('../mandelbrot.png', 'PNG')
+    return image
 
 
 if __name__ == '__main__':
-    main()
+    image = Image.new('HSV', (800, 600))
+    image = mandelbrot(-2.2, 0.8, -1.2, 1.2, 100, image)
+    image.convert('RGB').save('../mandelbrot.png', 'PNG')
