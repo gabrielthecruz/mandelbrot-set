@@ -61,9 +61,11 @@ def escape_time(coord, max_iter):
 
 
 def smooth_coloring(iter_n, x, y, max_iters):
+    '''Generates a color.'''
     if iter_n < max_iters:
         log_z = math.log(x ** 2 + y ** 2) / 2
-        iter_n += 1 - math.log(log_z / math.log(2)) / math.log(2)
+        log_2 = math.log(2)
+        iter_n += 1 - math.log(log_z / log_2) / log_2
 
     hue = int(255 * iter_n / max_iters)
     saturation = 255
